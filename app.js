@@ -1,3 +1,4 @@
+import {categoryGroups,subcategories,packagePreset} from './categories.js';
 import {snapshot,setupComparison} from './comparison.js';
 import {calculate} from './calculator.js';
 import {fetchRate} from './exchange.js';
@@ -9,18 +10,8 @@ const money = value => new Intl.NumberFormat('ru-RU',{minimumFractionDigits:2,ma
 const weight = value => new Intl.NumberFormat('ru-RU',{maximumFractionDigits:3}).format(value);
 const comparison=setupComparison(money);
 let currentSnapshots=[];
-// Editable rough assumptions for one packaged item; not measured product data.
-const categories = {
- sneakers: [1.2, 35, 25, 15],
- tshirt: [0.3, 30, 25, 3],
- hoodie: [0.8, 35, 30, 8],
- jeans: [0.9, 35, 30, 5],
- jacket: [1.3, 40, 35, 15],
- phone: [0.5, 20, 12, 8],
- headphones: [0.6, 25, 20, 12],
- laptop: [3, 45, 35, 12],
- book: [0.7, 25, 18, 5],
-};
+let selectedGroup='sport';
+let selectedCategory='sneakers';
 let manualPackage = false;
 const packageFields = ['weight', 'length', 'width', 'height'];
 function packageDescription() {
@@ -30,13 +21,31 @@ function packageDescription() {
 }
 function updateEstimate() { get('package-estimate').textContent = packageDescription(); }
 function applyCategory() {
- const preset = categories[get('category').value];
+ const preset = packagePreset(selectedGroup,selectedCategory);
  manualPackage = !preset;
  packageFields.forEach((id,i)=> { get(id).value = preset ? preset[i] : ''; });
  if (!preset) get('package-details').open = true;
  updateEstimate();
 }
-get('category').addEventListener('change', applyCategory);
+function renderCategoryButtons(){
+ get('category-groups').innerHTML=categoryGroups.map(g=>`<button type="button" data-group="${g.id}" aria-pressed="${g.id===selectedGroup}">${g.name}</button>`).join('');
+ get('category-item').innerHTML=subcategories(selectedGroup).map(item=>`<option value="${item.id}" ${item.id===selectedCategory?'selected':''}>${item.name}</option>`).join('');
+}
+get('category-groups').addEventListener('click',event=>{
+ const button=event.target.closest('[data-group]');
+ if(!button || button.dataset.group===selectedGroup) return;
+ selectedGroup=button.dataset.group;
+ selectedCategory=subcategories(selectedGroup)[0].id;
+ renderCategoryButtons();applyCategory();invalidate();
+ get('category-groups').querySelector(`[data-group="${selectedGroup}"]`).focus();
+});
+get('category-item').addEventListener('change',event=>{
+ if(event.target.value===selectedCategory) return;
+ selectedCategory=event.target.value;
+ renderCategoryButtons();applyCategory();invalidate();
+ get('category-item').focus();
+});
+renderCategoryButtons();
 packageFields.forEach(id=>get(id).addEventListener('input',()=>{manualPackage=true;updateEstimate();}));
 form.addEventListener('invalid', event=> { const details=event.target.closest('details'); if(details) details.open=true; },true);
 applyCategory();
@@ -47,7 +56,7 @@ form.addEventListener('submit', event => {
   if(dims.some(Boolean) && !dims.every(Boolean)) throw new Error('Укажите все три размера упаковки или оставьте их пустыми.');
   const calculationInput={country:get('country').value,mode:get('shipping-mode').value,fx:currentFx(),price:number('price'),currency:get('currency').value,weight:number('weight'),exchange:number('exchange'),extra:number('extra'),customsExchange:get('customs-exchange').value ? number('customs-exchange') : number('exchange'),taxMode:get('tax-mode').value,originShipping:number('origin-shipping'),customsFee:number('customs-fee'),clearanceFees:['clearance-onex','clearance-inex','clearance-u2g'].map(id=>get(id).value === '' ? null : number(id)),dimensions:dims.every(Boolean)?dims.map(Number):[],rates:['onex','inex','u2g'].map(id=>get(id).disabled?1:number(id))};
   const rows=calculate(calculationInput);
-  currentSnapshots=rows.map(result=>snapshot(calculationInput,result,{country:countries[get('country').value].name,category:get('category').selectedOptions[0].textContent,manualPackage,rateDates:Object.fromEntries(Object.keys(currentFx()).filter(c=>dates[c]).map(c=>[c,dates[c]]))}));
+  currentSnapshots=rows.map(result=>snapshot(calculationInput,result,{country:countries[get('country').value].name,category:categoryGroups.find(g=>g.id===selectedGroup).name+' / '+subcategories(selectedGroup).find(i=>i.id===selectedCategory).name,groupId:selectedGroup,subcategoryId:selectedCategory,manualPackage,rateDates:Object.fromEntries(Object.keys(currentFx()).filter(c=>dates[c]).map(c=>[c,dates[c]]))}));
   const best=Math.min(...rows.map(r=>r.shipping));
   get('result-content').innerHTML=`<p class="result-caption">${packageDescription()}<br>Цена товара: ${money(rows[0].product)} · курс: ${new Intl.NumberFormat('ru-RU',{maximumFractionDigits:6}).format(number('exchange'))} ₾/${get('currency').value}<br>${rows[0].reason}. ${rows[0].taxable ? 'НДС и заданные сборы включены.' : 'НДС не начисляется для обычной личной посылки.'}</p><p class="result-caption">${unavailableText()}</p>`+rows.map((r,index)=>`<article class="card ${r.shipping===best?'best':''}"><div class="card-head"><h3><a class="carrier-link" href="${carrierSites[r.id]}" target="_blank" rel="noopener noreferrer" aria-label="${r.name} — открыть сайт в новой вкладке">${r.name} ↗</a></h3>${r.shipping===best?'<span class="badge">Ниже базовый тариф</span>':''}</div><div class="card-main"><div class="cost"><small>Итого с НДС и сборами</small>${money(r.total)}</div><div class="subtotal">Перевозка<br><strong>≈ ${money(r.shipping)}</strong></div></div><div class="payment-split"><div><span>Сразу</span><strong>${money(r.payNow)}</strong><small>Товар + доставка до склада</small></div><div><span>Потом ≈</span><strong>${money(r.payLater)}</strong><small>Перевозка, налоги, сборы и прочие расходы</small></div></div><div class="delivery-estimate"><div><span>Примерный срок</span><strong>≈ ${r.delivery.label}</strong></div><p>${r.delivery.detail} <a href="${r.delivery.source}" target="_blank" rel="noopener noreferrer">Сроки перевозчика</a></p></div><dl class="tax-breakdown"><div><dt>Товар</dt><dd>${money(r.product)}</dd></div><div><dt>Доставка до склада</dt><dd>${money(number('origin-shipping'))}</dd></div><div><dt>НДС ${r.taxable ? '18%' : '— льгота'}</dt><dd>${money(r.vat)}</dd></div>${r.taxable ? `<div class="tax-base"><dt>База НДС: товар + доставка</dt><dd>${money(r.taxBase)}</dd></div>` : ''}<div><dt>Сбор таможни</dt><dd>${money(r.customsCharge)}</dd></div><div><dt>Оформление ${r.name}</dt><dd>${r.clearanceUnknown ? 'Не задано' : money(r.clearanceCharge)}</dd></div>${r.id === 'u2g' ? `<div><dt>Операционный сбор</dt><dd>${money(r.operationalCharge)}</dd></div>` : ''}<div><dt>Прочие расходы</dt><dd>${money(number('extra'))}</dd></div></dl><p class="card-note">${weight(r.billedWeight)} кг × ${weight(r.rate)} ${r.currency}/кг<br>${r.note} · <a href="${r.source}" target="_blank" rel="noopener noreferrer">Тарифы</a>${r.clearanceUnknown ? '<br>Итог неполный: добавьте стоимость оформления.' : ''}${r.id==='u2g'&&!dims.every(Boolean)?'<br>Размеры не указаны: сумма может вырасти.':''}</p><button type="button" class="add-comparison" data-add-comparison="${index}">Добавить в сравнение</button></article>`).join('');
 
