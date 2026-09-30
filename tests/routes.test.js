@@ -1,0 +1,10 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {calculate} from '../calculator.js';
+import {getRoute,routeWeight} from '../routes.js';
+const base={price:100,currency:'EUR',weight:1,exchange:3,fx:{EUR:3,USD:2.7,GBP:3.5,TRY:.07,CNY:.38,GEL:1}};
+test('Germany uses EUR purchase and independently denominated shipping',()=>{const r=calculate({...base,country:'DE'});assert.deepEqual(r.map(x=>x.id),['onex','inex']);assert.equal(r[0].product,300);assert.equal(r[0].shipping,29);assert.equal(r[1].shipping,24);});
+test('Turkey uses TRY for product and USD for shipping',()=>{const r=calculate({...base,country:'TR',currency:'TRY',exchange:.07,price:1000});assert.equal(r[0].product,70);assert.equal(r[0].shipping,10.8);assert.equal(r[0].vat,0);});
+test('minimum weights and threshold volume rules',()=>{assert.equal(routeWeight(getRoute('GB','inex'),.05,[]),.2);assert.equal(routeWeight(getRoute('TR','u2g'),1,[60,50,100]),1);assert.equal(routeWeight(getRoute('TR','u2g'),1,[60,51,100]),51);assert.equal(routeWeight(getRoute('CN','u2g','road'),1,[60,30,100]),30);assert.equal(routeWeight(getRoute('GR','u2g'),51,[]),51);});
+test('China modes select appropriate routes and rates',()=>{assert.equal(calculate({...base,country:'CN',mode:'air'})[1].rate,12);const r=calculate({...base,country:'CN',mode:'road'});assert.equal(r.length,1);assert.equal(r[0].rate,5.5);});
+test('missing rates cannot silently price foreign currencies at one GEL',()=>{assert.throws(()=>calculate({...base,country:'GB',fx:{EUR:3}}));assert.throws(()=>calculate({...base,country:'XX'}));});

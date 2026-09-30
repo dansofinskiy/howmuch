@@ -1,0 +1,6 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {snapshot,saveComparisons,readComparisons} from '../comparison.js';
+test('snapshot preserves nested inputs and result when originals change',()=>{const input={fx:{USD:2.6},dimensions:[35,25,15]};const result={total:500,delivery:{label:'5 дней'}};const x=snapshot(input,result,{country:'США'});input.fx.USD=3;input.dimensions[0]=100;result.total=900;assert.equal(x.input.fx.USD,2.6);assert.equal(x.input.dimensions[0],35);assert.equal(x.result.total,500);});
+test('session round trip preserves multiple countries and deleting variants',()=>{const store={data:null,getItem(){return this.data;},setItem(k,v){this.data=v;}};const a=snapshot({price:100},{total:500},{country:'США'});const b=snapshot({price:80},{total:400},{country:'Германия'});saveComparisons(store,[a,b]);assert.deepEqual(readComparisons(store),[a,b]);saveComparisons(store,[b]);assert.deepEqual(readComparisons(store),[b]);saveComparisons(store,[]);assert.deepEqual(readComparisons(store),[]);});
+test('bad storage is surfaced for UI recovery',()=>{assert.throws(()=>readComparisons({getItem:()=>'{bad'}));assert.throws(()=>saveComparisons({setItem(){throw Error('quota');}},[]));});
