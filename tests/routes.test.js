@@ -8,3 +8,19 @@ test('Turkey uses TRY for product and USD for shipping',()=>{const r=calculate({
 test('minimum weights and threshold volume rules',()=>{assert.equal(routeWeight(getRoute('GB','inex'),.05,[]),.2);assert.equal(routeWeight(getRoute('TR','u2g'),1,[60,50,100]),1);assert.equal(routeWeight(getRoute('TR','u2g'),1,[60,51,100]),51);assert.equal(routeWeight(getRoute('CN','u2g','road'),1,[60,30,100]),30);assert.equal(routeWeight(getRoute('GR','u2g'),51,[]),51);});
 test('China modes select appropriate routes and rates',()=>{assert.equal(calculate({...base,country:'CN',mode:'air'})[1].rate,12);const r=calculate({...base,country:'CN',mode:'road'});assert.equal(r.length,1);assert.equal(r[0].rate,5.5);});
 test('missing rates cannot silently price foreign currencies at one GEL',()=>{assert.throws(()=>calculate({...base,country:'GB',fx:{EUR:3}}));assert.throws(()=>calculate({...base,country:'XX'}));});
+test('Camex US estimate uses agreed tariff, minimum and clearance fee',()=>{
+ const input={price:50,currency:'USD',weight:1,exchange:2.627,dimensions:[20,20,20]};
+ const row=calculate(input).find(r=>r.id==='camex');
+ assert.equal(row.rate,8.95);
+ assert.ok(Math.abs(row.shipping-23.51165)<1e-9);
+ assert.equal(row.billedWeight,1);
+ assert.match(row.note,/не подтверждено/);
+ assert.equal(row.delivery.label,'4–7 дней');
+ assert.equal(calculate({...input,weight:.01}).find(r=>r.id==='camex').billedWeight,.1);
+ const taxed=calculate({...input,price:150}).find(r=>r.id==='camex');
+ assert.equal(taxed.clearanceCharge,10);
+ assert.equal(taxed.operationalCharge,0);
+ assert.equal(calculate({...input,price:150,clearanceFees:[15,10,16,null]}).find(r=>r.id==='camex').clearanceUnknown,true);
+ for(const country of ['GB','DE','CN','TR','GR']) assert.equal(getRoute(country,'camex'),null);
+ assert.equal(getRoute('CN','camex','road'),null);
+});

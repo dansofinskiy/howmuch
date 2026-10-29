@@ -14,10 +14,10 @@ test('origin delivery is taxable, miscellaneous expenses are not',()=>{const r=c
 test('forced VAT and invalid tax inputs',()=>{assert.equal(calculate({...input,taxMode:'taxable'})[0].vat,53.46);for(const change of [{customsExchange:0},{originShipping:-1},{taxMode:'invalid'}])assert.throws(()=>calculate({...input,...change}));});
 
 test('clearance charges apply only when taxable, outside VAT base',()=>{const free=calculate(input);assert.ok(free.every(r=>r.customsCharge===0 && r.clearanceCharge===0 && !r.clearanceUnknown));const rows=calculate({...input,price:150});assert.equal(rows[0].customsCharge,20);assert.equal(rows[0].clearanceCharge,15);assert.equal(rows[0].vat,77.76);assert.equal(rows[1].clearanceCharge,10);assert.equal(rows[2].clearanceCharge,16);assert.ok(rows.every(r=>!r.clearanceUnknown));});
-test('custom fees including explicit zero are respected',()=>{const rows=calculate({...input,price:150,customsFee:25,clearanceFees:[0,10,12]});assert.equal(rows[0].total,534.76);assert.equal(rows[1].clearanceCharge,10);assert.equal(rows[2].clearanceCharge,12);assert.ok(rows.every(r=>!r.clearanceUnknown));});
+test('custom fees including explicit zero are respected',()=>{const rows=calculate({...input,price:150,customsFee:25,clearanceFees:[0,10,12,10]});assert.equal(rows[0].total,534.76);assert.equal(rows[1].clearanceCharge,10);assert.equal(rows[2].clearanceCharge,12);assert.ok(rows.every(r=>!r.clearanceUnknown));});
 test('invalid fees are rejected',()=>{for(const change of [{customsFee:-1},{customsFee:NaN},{clearanceFees:[1,-1,0]},{clearanceFees:[1,2]},{clearanceFees:[1,Infinity,0]}])assert.throws(()=>calculate({...input,...change}));});
 
-test("cleared fee input remains unknown rather than free",()=>{const rows=calculate({...input,price:150,clearanceFees:[15,null,null]});assert.equal(rows[1].clearanceUnknown,true);assert.equal(rows[2].clearanceUnknown,true);});
+test("cleared fee input remains unknown rather than free",()=>{const rows=calculate({...input,price:150,clearanceFees:[15,null,null,10]});assert.equal(rows[1].clearanceUnknown,true);assert.equal(rows[2].clearanceUnknown,true);});
 
 test('operational fee covers all bands and shared boundaries',()=>{
  for(const [value,fee] of [[0,1],[99.99,1],[100,2],[199.99,2],[200,3],[299.99,3],[300,6],[405,8.1],[2999.99,60],[3000,120],[9999.99,400],[10000,800],[19999.99,1600],[20000,2400]]) assert.equal(operationalFee(value),fee);

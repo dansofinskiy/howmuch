@@ -3,6 +3,7 @@ export const carriers = [
   { id: 'onex', name: 'ONEX', rate: 27, currency: 'GEL', source: 'https://www.onex.ge/', note: 'Фактический вес · стандартные посылки' },
   { id: 'inex', name: 'Inex', rate: 9.7, currency: 'USD', source: 'https://old.legacy.inex.ge/en/prices', note: 'Фактический вес' },
   { id: 'u2g', name: 'USA2Georgia', rate: 9.95, currency: 'USD', source: 'https://www.usa2georgia.com/packages', note: 'Больший из фактического и объёмного веса' },
+  { id: 'camex', name: 'Camex', rate: 8.95, currency: 'USD', source: 'https://camex.ge/?lang=en&module=tariffs', note: 'Предварительно по фактическому весу' },
 ];
 // USA2Georgia agreement §2¹.4. At shared boundaries use the next bracket.
 export function operationalFee(value) {
@@ -12,8 +13,8 @@ export function operationalFee(value) {
     : value < 20000 ? value * 0.08 : value * 0.12;
   return Math.round((fee + Number.EPSILON) * 100) / 100;
 }
-export function calculate({price, currency, weight, exchange, dimensions = [], country = 'US', mode = 'air', fx = {USD:exchange,GEL:1}, rates = carriers.map(c => getRoute(country,c.id,mode)?.rate ?? 1), extra = 0, customsExchange = exchange, taxMode = 'auto', originShipping = 0, customsFee = 20, clearanceFees = [15, 10, 16]}) {
-  if (![price,weight,exchange,customsExchange,originShipping,extra,customsFee,...clearanceFees.filter(f=>f!==null),...rates,...dimensions].every(Number.isFinite) || customsFee < 0 || clearanceFees.length !== 3 || clearanceFees.some(f=>f!==null && f<0) || price < 0 || weight <= 0 || exchange <= 0 || customsExchange <= 0 || originShipping < 0 || extra < 0 || rates.some(r=>r<=0) || dimensions.some(d=>d<=0) || ![0,3].includes(dimensions.length) || rates.length !== 3 || !['auto','taxable'].includes(taxMode) || !currencyCodes.includes(currency)) throw new Error('Проверьте цену, вес, курс и размеры.');
+export function calculate({price, currency, weight, exchange, dimensions = [], country = 'US', mode = 'air', fx = {USD:exchange,GEL:1}, rates = carriers.map(c => getRoute(country,c.id,mode)?.rate ?? 1), extra = 0, customsExchange = exchange, taxMode = 'auto', originShipping = 0, customsFee = 20, clearanceFees = [15, 10, 16, 10]}) {
+  if (![price,weight,exchange,customsExchange,originShipping,extra,customsFee,...clearanceFees.filter(f=>f!==null),...rates,...dimensions].every(Number.isFinite) || customsFee < 0 || clearanceFees.length !== carriers.length || clearanceFees.some(f=>f!==null && f<0) || price < 0 || weight <= 0 || exchange <= 0 || customsExchange <= 0 || originShipping < 0 || extra < 0 || rates.some(r=>r<=0) || dimensions.some(d=>d<=0) || ![0,3].includes(dimensions.length) || rates.length !== carriers.length || !['auto','taxable'].includes(taxMode) || !currencyCodes.includes(currency)) throw new Error('Проверьте цену, вес, курс и размеры.');
   const convert = code => { const value = code === 'GEL' ? 1 : fx[code]; if(!Number.isFinite(value) || value<=0) throw new Error('Укажите курс ' + code + ' → GEL в разделе «Курс и тарифы».'); return value; };
   const product = price * convert(currency);
   const customsProduct = price * (currency === 'GEL' ? 1 : customsExchange);

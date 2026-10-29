@@ -6,10 +6,11 @@ export const countries = {
 export const currencyCodes=['USD','EUR','GBP','CNY','TRY','GEL'];
 const onex='https://www.onex.ge/ru';
 const inex='https://old.legacy.inex.ge/en/prices';
+const camex='https://camex.ge/?lang=en&module=tariffs';
 const u2g='https://www.usa2georgia.com/packages';
 const route=(rate,currency,mode,rule,source,min=0,note='')=>({rate,currency,mode,rule,source,min,note});
 export const routes={
- US:{onex:route(27,'GEL','Авиа','actual',onex),inex:route(9.7,'USD','Авиа','actual',inex,.1,'Таблица тарифов: $9,70; новость 2025 года: $8,50. Уточните перед покупкой.'),u2g:route(9.95,'USD','Авиа','volume',u2g)},
+ US:{camex:route(8.95,'USD','Авиа','actual',camex,.1,'Предварительно по фактическому весу: правило объёмного веса не подтверждено, итог может вырасти. Тариф $8,95 выбран по карточке сайта; в тексте указан $8,35. Курс оплаты Camex может отличаться от справочного.'),onex:route(27,'GEL','Авиа','actual',onex),inex:route(9.7,'USD','Авиа','actual',inex,.1,'Таблица тарифов: $9,70; новость 2025 года: $8,50. Уточните перед покупкой.'),u2g:route(9.95,'USD','Авиа','volume',u2g)},
  GB:{onex:route(27,'GEL','Авиа','actual',onex),inex:route(7.5,'GBP','Авиа','actual',inex,.2)},
  DE:{onex:route(29,'GEL','Авиа','actual',onex,0,'Для стандартных посылок; негабарит уточняйте у Onex.'),inex:route(8,'EUR','Наземная','actual',inex,.2)},
  CN:{onex:route(35,'GEL','Авиа','actual',onex,0,'Для стандартных посылок; негабарит уточняйте у Onex.'),u2g:route(12,'USD','Авиа','volume',u2g)},
@@ -22,6 +23,7 @@ const deliverySources = {
  u2g:'https://www.usa2georgia.com/packages',
 };
 export function deliveryEstimate(country,id,mode='air') {
+ if(id==='camex') return {label:'4–7 дней',detail:'Ориентир перевозки из США после отправки. Ожидание рейса, таможня и выдача могут увеличить срок.',source:'https://camex.ge/?lang=en&module=faq'};
  if(id==='onex') return {label: ['US','GB'].includes(country)?'4–8 рабочих дней':'5–10 рабочих дней', detail:'С момента поступления на зарубежный склад Onex.', source:deliverySources.onex};
  if(id==='inex') return {label:['TR','GR'].includes(country)?'5–7 дней':'5–10 дней', detail:'В пути после отправки. Ожидание рейса и таможня — дополнительно; затем сортировка 0–2 дня и доставка в филиал 0–3 дня.', source:deliverySources.inex};
  const label=country==='CN'?(mode==='road'?'30–45 рабочих дней':'5–8 рабочих дней'):country==='GR'?'7–14 рабочих дней':'7–10 рабочих дней';

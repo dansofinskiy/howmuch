@@ -17,3 +17,5 @@
 #category{margin-bottom:18px}
 
 .category-picker{border:0;padding:0;margin:0 0 22px;min-width:0}.category-picker legend{font-size:14px;font-weight:600;margin-bottom:12px}.category-groups{display:flex;flex-wrap:wrap;gap:6px;padding-bottom:14px;border-bottom:1px solid #e1e6ef}.category-groups button{display:block;width:auto;margin:0;font:inherit;font-size:14px;line-height:1.4;cursor:pointer;text-align:left;background:transparent;color:#637088;border-radius:8px;padding:8px 11px;font-weight:600}.category-groups button[aria-pressed=true]{background:#17233a;color:#fff}.category-groups button:hover{background:#e8edf7;color:#17233a}.category-groups button[aria-pressed=true]:hover{background:#253451;color:white}.category-item-label{margin:14px 0 8px;font-size:13px;color:#637088}.category-item-select{height:44px}.category-item-select option[value="custom"]{font-style:italic}
+
+.carrier-names{flex-wrap:wrap}.row.dimensions{flex-wrap:wrap}.row.dimensions>div{flex:1 1 90px}

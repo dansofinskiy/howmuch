@@ -1,6 +1,6 @@
 import {categoryGroups,subcategories,packagePreset} from './categories.js';
 import {snapshot,setupComparison} from './comparison.js';
-import {calculate} from './calculator.js';
+import {calculate,carriers} from './calculator.js';
 import {fetchRate} from './exchange.js';
 import {countries,getRoute} from './routes.js';
 const form = document.querySelector('form');
@@ -54,7 +54,7 @@ form.addEventListener('submit', event => {
  try {
   const dims=['length','width','height'].map(id=>get(id).value);
   if(dims.some(Boolean) && !dims.every(Boolean)) throw new Error('Укажите все три размера упаковки или оставьте их пустыми.');
-  const calculationInput={country:get('country').value,mode:get('shipping-mode').value,fx:currentFx(),price:number('price'),currency:get('currency').value,weight:number('weight'),exchange:number('exchange'),extra:number('extra'),customsExchange:get('customs-exchange').value ? number('customs-exchange') : number('exchange'),taxMode:get('tax-mode').value,originShipping:number('origin-shipping'),customsFee:number('customs-fee'),clearanceFees:['clearance-onex','clearance-inex','clearance-u2g'].map(id=>get(id).value === '' ? null : number(id)),dimensions:dims.every(Boolean)?dims.map(Number):[],rates:['onex','inex','u2g'].map(id=>get(id).disabled?1:number(id))};
+  const calculationInput={country:get('country').value,mode:get('shipping-mode').value,fx:currentFx(),price:number('price'),currency:get('currency').value,weight:number('weight'),exchange:number('exchange'),extra:number('extra'),customsExchange:get('customs-exchange').value ? number('customs-exchange') : number('exchange'),taxMode:get('tax-mode').value,originShipping:number('origin-shipping'),customsFee:number('customs-fee'),clearanceFees:carriers.map(c=>'clearance-'+c.id).map(id=>get(id).value === '' ? null : number(id)),dimensions:dims.every(Boolean)?dims.map(Number):[],rates:carriers.map(c=>c.id).map(id=>get(id).disabled?1:number(id))};
   const rows=calculate(calculationInput);
   currentSnapshots=rows.map(result=>snapshot(calculationInput,result,{country:countries[get('country').value].name,category:categoryGroups.find(g=>g.id===selectedGroup).name+' / '+subcategories(selectedGroup).find(i=>i.id===selectedCategory).name,groupId:selectedGroup,subcategoryId:selectedCategory,manualPackage,rateDates:Object.fromEntries(Object.keys(currentFx()).filter(c=>dates[c]).map(c=>[c,dates[c]]))}));
   const best=Math.min(...rows.map(r=>r.shipping));
@@ -69,8 +69,8 @@ const fx = {GEL:1};
 const dates = {};
 let requestVersion = 0;
 let editVersion = 0;
-const ids=['onex','inex','u2g'];
-const carrierSites={onex:'https://www.onex.ge/',inex:'https://inex.ge/',u2g:'https://www.usa2georgia.com/'};
+const ids=carriers.map(c=>c.id);
+const carrierSites={camex:'https://camex.ge/',onex:'https://www.onex.ge/',inex:'https://inex.ge/',u2g:'https://www.usa2georgia.com/'};
 function neededCurrencies() {
  return [...new Set([get('currency').value,...ids.map(id=>getRoute(get('country').value,id,get('shipping-mode').value)?.currency).filter(Boolean)])].filter(c=>c!=='GEL');
 }
